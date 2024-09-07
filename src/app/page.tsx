@@ -1,8 +1,8 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Stage } from "@react-three/drei";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import * as THREE from "three";
 
 const colors = [
@@ -36,8 +36,16 @@ function ColorSelector({
   );
 }
 
-function IPhoneModel({ color }: { color: string }) {
+function IPhoneModel({
+  color,
+  triggerRotation,
+}: {
+  color: string;
+  triggerRotation: number;
+}) {
   const { scene } = useGLTF("/models/iphone.glb");
+  const groupRef = useRef<THREE.Group>();
+  const rotationRef = useRef({ current: 0, target: 0 });
 
   useEffect(() => {
     scene.traverse((child) => {
@@ -58,23 +66,51 @@ function IPhoneModel({ color }: { color: string }) {
     });
   }, [scene, color]);
 
-  return <primitive object={scene} />;
+  useEffect(() => {
+    rotationRef.current.target += Math.PI * 2;
+  }, [triggerRotation]);
+
+  useFrame((_, delta) => {
+    if (groupRef.current) {
+      rotationRef.current.current = THREE.MathUtils.lerp(
+        rotationRef.current.current,
+        rotationRef.current.target,
+        0.05
+      );
+      groupRef.current.rotation.y = rotationRef.current.current;
+    }
+  });
+
+  return (
+    <group ref={groupRef as React.Ref<THREE.Group>}>
+      <primitive object={scene} />
+    </group>
+  );
 }
 
 export default function Home() {
   const [selectedColor, setSelectedColor] = useState(colors[0].value);
+  const [rotationTrigger, setRotationTrigger] = useState(0);
+
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+    setRotationTrigger((prev) => prev + 1);
+  };
 
   return (
     <div className="w-full h-screen relative bg-black">
       <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
         <Stage environment="studio" intensity={0.6}>
-          <IPhoneModel color={selectedColor} />
+          <IPhoneModel
+            color={selectedColor}
+            triggerRotation={rotationTrigger}
+          />
         </Stage>
         <OrbitControls enableZoom={false} />
       </Canvas>
       <ColorSelector
         selectedColor={selectedColor}
-        onColorSelect={setSelectedColor}
+        onColorSelect={handleColorSelect}
       />
     </div>
   );

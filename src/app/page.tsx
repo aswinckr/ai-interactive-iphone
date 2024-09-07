@@ -70,7 +70,7 @@ function IPhoneModel({
     rotationRef.current.target += Math.PI * 2;
   }, [triggerRotation]);
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     if (groupRef.current) {
       rotationRef.current.current = THREE.MathUtils.lerp(
         rotationRef.current.current,
